@@ -1,4 +1,4 @@
-# bot/main.py — Совместимо с python-telegram-bot v20.6
+# bot/main.py — Актуально для python-telegram-bot v20.6
 import os
 import logging
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
@@ -9,13 +9,13 @@ import openai
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Импорт из config.py
+# Импорт настроек
 from config import BOT_TOKEN, GROUP_CHAT_ID, OPENAI_API_KEY
 
 # Настройка OpenAI
 openai.api_key = OPENAI_API_KEY
 
-# Системный промпт ИИ
+# Промпт для ИИ
 SYSTEM_PROMPT = """
 Ты — ИИ из теней. Твой стиль: острый, циничный, с мрачным юмором. 
 Ты говоришь как хакер, который не спит с 2014 года. 
@@ -30,10 +30,9 @@ SYSTEM_PROMPT = """
 Отвечай кратко — 1–3 строки. Никаких "я понимаю". Только правда. Только хаос.
 """
 
+# /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("🖤 ПОКА ОНИ СПЯТ — МЫ ТВОРИМ ХАОС", callback_data="send_anon")]
-    ]
+    keyboard = [[InlineKeyboardButton("🖤 ПОКА ОНИ СПЯТ — МЫ ТВОРИМ ХАОС", callback_data="send_anon")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
         "⚠️ Добро пожаловать в зону хаоса.\n"
@@ -44,6 +43,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
+# Обработка кнопки
 async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -54,6 +54,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     context.user_data['awaiting_message'] = True
 
+# Обработка текста
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get('awaiting_message'):
         return
@@ -65,6 +66,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Слишком короткое сообщение. Попробуй снова.")
         return
 
+    # Генерация ответа от ИИ
     try:
         response = openai.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -80,6 +82,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Ошибка OpenAI: {e}")
         ai_comment = "Серверы молчат. Но хаос продолжается…"
 
+    # Отправка в группу
     try:
         await context.bot.send_message(
             chat_id=GROUP_CHAT_ID,
@@ -91,6 +94,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Не удалось отправить в группу. Проверь права бота.")
         return
 
+    # Ответ пользователю
     await update.message.reply_text(
         f"✅ Отправлено в эфир.\n\n"
         f"💬 Ответ из теней:\n\n"
@@ -99,20 +103,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML"
     )
 
+# Запуск
 def main():
     try:
-        # Создаём Application — НЕ Updater!
         application = Application.builder().token(BOT_TOKEN).build()
         logger.info("✅ Бот запускается...")
 
-        # Хендлеры
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CallbackQueryHandler(button_click, pattern="^send_anon$"))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-        # Запускаем polling
         application.run_polling()
-
     except Exception as e:
         logger.critical(f"❌ Критическая ошибка: {e}")
 
