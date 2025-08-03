@@ -1,4 +1,4 @@
-# bot/main.py
+# bot/main.py — Совместимо с python-telegram-bot v20.6
 import os
 import logging
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
@@ -9,13 +9,13 @@ import openai
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# === Загружаем переменные из config.py (или .env) ===
+# Импорт из config.py
 from config import BOT_TOKEN, GROUP_CHAT_ID, OPENAI_API_KEY
 
 # Настройка OpenAI
 openai.api_key = OPENAI_API_KEY
 
-# Системный промпт — тёмный, циничный
+# Системный промпт ИИ
 SYSTEM_PROMPT = """
 Ты — ИИ из теней. Твой стиль: острый, циничный, с мрачным юмором. 
 Ты говоришь как хакер, который не спит с 2014 года. 
@@ -101,14 +101,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     try:
+        # Создаём Application — НЕ Updater!
         application = Application.builder().token(BOT_TOKEN).build()
         logger.info("✅ Бот запускается...")
 
+        # Хендлеры
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CallbackQueryHandler(button_click, pattern="^send_anon$"))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
+        # Запускаем polling
         application.run_polling()
+
     except Exception as e:
         logger.critical(f"❌ Критическая ошибка: {e}")
 
